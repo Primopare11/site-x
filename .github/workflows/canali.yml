@@ -6,5 +6,7 @@ jobs:
     steps:
       - env: { BUFFER_TOKEN: "${{ secrets.BUFFER_TOKEN }}" }
         run: |
-          curl -s https://api.buffer.com -H "Content-Type: application/json" -H "Authorization: Bearer $BUFFER_TOKEN" \
-            -d '{"query":"query { account { organizations { id channels { id name service } } } }"}'
+          q() { curl -s https://api.buffer.com -H "Content-Type: application/json" -H "Authorization: Bearer $BUFFER_TOKEN" -d "$1"; }
+          ORG=$(q '{"query":"query { account { organizations { id } } }"}' | jq -r '.data.account.organizations[0].id')
+          echo "organizzazione: $ORG"
+          q "{\"query\":\"query { channels(input: {organizationId: \\\"$ORG\\\"}) { id name service } }\"}"
