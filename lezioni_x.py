@@ -97,7 +97,9 @@ def main():
         try:
             l = leggi_pagina(u); testo = componi_testo(l, cfg); nome = nome_sicuro(u); mp4 = RADICE / "video" / f"{nome}.mp4"; avviso = ""
             if l["gif"]:
-                mb = converti(scarica(l["gif"], binario=True, limite=60 * 1024 * 1024), mp4, cfg.get("peso_massimo_mb_mp4", 15)); print(f"  MP4 {mb:.1f} MB")
+                tetto = cfg.get("peso_massimo_mb_mp4", 15)
+                mb = converti(scarica(l["gif"], binario=True, limite=60 * 1024 * 1024), mp4, tetto); print(f"  MP4 {mb:.1f} MB")
+                if mb > tetto: avviso = f"\n\n⚠️ L'MP4 pesa {mb:.1f} MB, oltre il limite di {tetto} MB di Buffer: va ridotto prima di caricarlo."
             else: avviso = "\n\n⚠️ Non ho trovato la GIF di anteprima in questa pagina: il video va aggiunto a mano."
             (RADICE / "uscita" / f"{nome}.titolo.txt").write_text(f"Nuova lezione: {l['titolo']}"[:200])
             (RADICE / "uscita" / f"{nome}.md").write_text(
