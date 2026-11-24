@@ -1,6 +1,6 @@
 # Lezioni → bozze per X
 
-Ogni ora (GitHub Actions) legge la sitemap del sito. Per ogni lezione nuova scarica la GIF di anteprima, la converte in MP4
+Ogni 3 ore (GitHub Actions) legge la sitemap del sito. Per ogni lezione nuova scarica la GIF di anteprima, la converte in MP4
 e apre una *issue* con il testo del post pronto da copiare in Buffer. Il video sta in `video/`. Non pubblica niente da solo.
 
 ## Per attivarlo
