@@ -68,7 +68,14 @@ def converti(gif_bytes, destinazione, tetto_mb):
     return mb
 
 def nome_sicuro(url):
-    return re.sub(r"[^a-z0-9]+", "-", urlparse(url).path.lower()).strip("-")[-60:] or "lezione"
+    # l'ultimo pezzo dell'indirizzo (lo «slug») è unico per ogni video; si tiene l'inizio, non la fine
+    pezzi = [x for x in urlparse(url).path.split("/") if x]
+    return re.sub(r"[^a-z0-9]+", "-", (pezzi[-1] if pezzi else "").lower()).strip("-")[:100] or "lezione"
+
+def link_video(nome):
+    repo = os.environ.get("GITHUB_REPOSITORY")                    # su GitHub Actions: «utente/repository»
+    if repo: return f"https://github.com/{repo}/raw/main/video/{nome}.mp4"   # scarica il file direttamente
+    return f"`video/{nome}.mp4`"
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--prova", action="store_true"); ap.add_argument("--config", default=str(RADICE / "config.json"))
@@ -94,7 +101,7 @@ def main():
             else: avviso = "\n\n⚠️ Non ho trovato la GIF di anteprima in questa pagina: il video va aggiunto a mano."
             (RADICE / "uscita" / f"{nome}.titolo.txt").write_text(f"Nuova lezione: {l['titolo']}"[:200])
             (RADICE / "uscita" / f"{nome}.md").write_text(
-                f"Testo del post (copialo in Buffer):\n\n```\n{testo}\n```\n\nVideo: `video/{nome}.mp4` (scaricalo da questo repository){avviso}\n\nPagina: {u}\n")
+                f"Testo del post (copialo in Buffer):\n\n```\n{testo}\n```\n\nVideo: {link_video(nome)}{avviso}\n\nPagina: {u}\n")
             print("  testo:", testo.replace("\n", " | "))
             visti.add(u)
         except Exception as e:
