@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       ultime: { description: "Tratta come nuove le ultime N lezioni (0 = solo le davvero nuove)", default: "0" }
-permissions: { contents: write, issues: write }
+permissions: { contents: write }
 concurrency: lezioni
 jobs:
   giro:
@@ -21,9 +21,3 @@ jobs:
       - name: Bozze su Buffer
         env: { BUFFER_TOKEN: "${{ secrets.BUFFER_TOKEN }}", BUFFER_CHANNEL_ID: "${{ vars.BUFFER_CHANNEL_ID }}" }
         run: python3 lezioni_x.py --buffer
-      - name: Una issue per ogni lezione nuova
-        env: { GH_TOKEN: "${{ github.token }}" }
-        run: |
-          for f in uscita/*.md; do [ -e "$f" ] || continue
-            n="${f%.md}"; gh issue create --title "$(cat "$n.titolo.txt")" --body-file "$f"
-          done
