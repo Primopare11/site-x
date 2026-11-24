@@ -1,0 +1,10 @@
+name: Canali Buffer
+on: workflow_dispatch
+jobs:
+  canali:
+    runs-on: ubuntu-latest
+    steps:
+      - env: { BUFFER_TOKEN: "${{ secrets.BUFFER_TOKEN }}" }
+        run: |
+          curl -s https://api.buffer.com -H "Content-Type: application/json" -H "Authorization: Bearer $BUFFER_TOKEN" \
+            -d '{"query":"query { account { organizations { id channels { id name service } } } }"}'
