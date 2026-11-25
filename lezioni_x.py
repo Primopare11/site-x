@@ -60,8 +60,12 @@ def componi_testo(l, cfg):
 def converti(gif_bytes, destinazione, tetto_mb):
     tmp = destinazione.with_suffix(".gif"); tmp.write_bytes(gif_bytes)
     try:
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(tmp), "-movflags", "+faststart", "-pix_fmt", "yuv420p",
-                        "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", "-c:v", "libx264", "-crf", "26", "-an", str(destinazione)], check=True)
+        # qualità più alta che sta nel tetto: prova dal CRF più basso (migliore) e si ferma al primo MP4 abbastanza leggero
+        for crf in (10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 33, 36):
+            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(tmp), "-movflags", "+faststart", "-pix_fmt", "yuv420p",
+                            "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", "-c:v", "libx264", "-preset", "slow", "-crf", str(crf), "-an", str(destinazione)], check=True)
+            if destinazione.stat().st_size / 1024 / 1024 <= tetto_mb: break
+        print(f"  CRF {crf}")
     finally: tmp.unlink(missing_ok=True)
     mb = destinazione.stat().st_size / 1024 / 1024
     if mb > tetto_mb: print(f"  attenzione: l'MP4 pesa {mb:.1f} MB, oltre il tetto di {tetto_mb} MB", file=sys.stderr)
