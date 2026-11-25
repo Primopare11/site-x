@@ -1,4 +1,4 @@
-name: Nuove lezioni → bozze per X
+name: Nuove lezioni → coda Buffer per X
 on:
   schedule: [{ cron: "17 */3 * * *" }]    # ogni 3 ore, al minuto 17
   workflow_dispatch:
@@ -18,6 +18,6 @@ jobs:
         run: |
           git config user.name "lezioni-x"; git config user.email "lezioni-x@users.noreply.github.com"
           git add stato video; git diff --cached --quiet || { git commit -m "Nuove lezioni"; git push; }
-      - name: Bozze su Buffer
+      - name: Post in coda su Buffer
         env: { BUFFER_TOKEN: "${{ secrets.BUFFER_TOKEN }}", BUFFER_CHANNEL_ID: "${{ vars.BUFFER_CHANNEL_ID }}" }
         run: python3 lezioni_x.py --buffer

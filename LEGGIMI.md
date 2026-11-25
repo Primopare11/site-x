@@ -1,4 +1,4 @@
-# Lezioni → bozze per X
+# Lezioni → coda Buffer per X
 
 Ogni 3 ore (GitHub Actions) legge il feed JSON del sito (`feed_url` in `config.json`; in mancanza, la sitemap). Per ogni lezione nuova scarica la GIF di anteprima, la converte in MP4
 e manda a Buffer il post (testo + video) che va nel prossimo slot libero della coda e si pubblica da solo. Il video sta in `video/`.
@@ -10,7 +10,7 @@ Per revisionare i post prima della pubblicazione, rimetti `"saveToDraft": True` 
 3. Crea un repository **privato** su GitHub e caricaci questa cartella.
 4. Imposta il segreto `BUFFER_TOKEN` e la variabile `BUFFER_CHANNEL_ID` (più `VIDEO_URL_BASE`, l'indirizzo pubblico di `video/`).
 5. In GitHub: Settings → Actions → General → Workflow permissions → «Read and write permissions».
-6. Scheda Actions → «Nuove lezioni → bozze per X» → Run workflow. Il primo giro segna le lezioni esistenti come già viste.
+6. Scheda Actions → «Nuove lezioni → coda Buffer per X» → Run workflow. Il primo giro segna le lezioni esistenti come già viste.
 
 ## Se il sito risponde «403 Forbidden»
 Il sito rifiuta le richieste automatiche. Lo script si presenta come `lezioni-x/1.0` e non finge di essere un browser.
