@@ -1,14 +1,16 @@
 # Lezioni → bozze per X
 
 Ogni 3 ore (GitHub Actions) legge la sitemap del sito. Per ogni lezione nuova scarica la GIF di anteprima, la converte in MP4
-e apre una *issue* con il testo del post pronto da copiare in Buffer. Il video sta in `video/`. Non pubblica niente da solo.
+e manda a Buffer il post (testo + video), che va nel prossimo slot libero della coda e si pubblica da solo. Il video sta in `video/`.
+Per revisionare i post prima della pubblicazione, rimetti `"saveToDraft": True` in `manda_a_buffer()` (`lezioni_x.py`): finiscono in Buffer come bozze, fuori dagli slot.
 
 ## Per attivarlo
 1. Compila `config.json`: `sitemap_url`, `filtro_lezioni` (un pezzo comune degli indirizzi delle lezioni, es. `/lezione/`), `hashtag`.
 2. Prova in locale: `python3 lezioni_x.py --prova` (serve `ffmpeg`).
 3. Crea un repository **privato** su GitHub e caricaci questa cartella.
-4. In GitHub: Settings → Actions → General → Workflow permissions → «Read and write permissions».
-5. Scheda Actions → «Nuove lezioni → bozze per X» → Run workflow. Il primo giro segna le lezioni esistenti come già viste.
+4. Imposta il segreto `BUFFER_TOKEN` e la variabile `BUFFER_CHANNEL_ID` (più `VIDEO_URL_BASE`, l'indirizzo pubblico di `video/`).
+5. In GitHub: Settings → Actions → General → Workflow permissions → «Read and write permissions».
+6. Scheda Actions → «Nuove lezioni → bozze per X» → Run workflow. Il primo giro segna le lezioni esistenti come già viste.
 
 ## Se il sito risponde «403 Forbidden»
 Il sito rifiuta le richieste automatiche. Lo script si presenta come `lezioni-x/1.0` e non finge di essere un browser.
