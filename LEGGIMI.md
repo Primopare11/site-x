@@ -1,8 +1,8 @@
 # Lezioni → bozze per X
 
-Ogni 3 ore (GitHub Actions) legge la sitemap del sito. Per ogni lezione nuova scarica la GIF di anteprima, la converte in MP4
-e manda a Buffer il post (testo + video), che va nel prossimo slot libero della coda e si pubblica da solo. Il video sta in `video/`.
-Per revisionare i post prima della pubblicazione, rimetti `"saveToDraft": True` in `manda_a_buffer()` (`lezioni_x.py`): finiscono in Buffer come bozze, fuori dagli slot.
+Ogni 3 ore (GitHub Actions) legge il feed JSON del sito (`feed_url` in `config.json`; in mancanza, la sitemap). Per ogni lezione nuova scarica la GIF di anteprima, la converte in MP4
+e manda a Buffer il post (testo + video) come bozza, da approvare a mano. Il video sta in `video/`.
+Per far pubblicare i post da soli nel prossimo slot libero, metti `"saveToDraft": False` in `manda_a_buffer()` (`lezioni_x.py`).
 
 ## Per attivarlo
 1. Compila `config.json`: `sitemap_url`, `filtro_lezioni` (un pezzo comune degli indirizzi delle lezioni, es. `/lezione/`), `hashtag`.

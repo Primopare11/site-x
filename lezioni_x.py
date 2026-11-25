@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Lezioni → post per X (via Buffer).
 
-Legge la sitemap, trova le lezioni nuove, scarica la GIF di anteprima, la converte in MP4 e prepara il testo del post.
+Legge il feed JSON del sito (o la sitemap), trova le lezioni nuove, scarica la GIF di anteprima, la converte in MP4 e prepara il testo del post.
 Non pubblica niente: scrive in `uscita/` (testo e titolo della issue) e il video in `video/`.
 Uso:  python3 lezioni_x.py            giro normale (la prima volta segna tutto come già visto e si ferma)
       python3 lezioni_x.py --prova    non scrive lo stato: mostra cosa farebbe
@@ -49,6 +49,11 @@ def leggi_pagina(url):
     gif = gif or meta(p, "og:image")
     return {"url": url, "titolo": titolo, "descrizione": meta(p, "og:description") or meta(p, "description"), "gif": urljoin(url, gif) if gif else ""}
 
+def leggi_feed(url):
+    """Feed JSON del sito (più recenti per primi) → lista di lezioni nello stesso formato di leggi_pagina()."""
+    return [{"url": x["update_link"], "titolo": re.sub(r"\s+", " ", html.unescape(x["update_name"])).strip(),
+             "descrizione": x.get("update_description", ""), "gif": x.get("update_previewimage", "")} for x in json.loads(scarica(url))]
+
 def componi_testo(l, cfg):
     tag = " ".join(cfg.get("hashtag", []))
     fisso = f"\n\n{cfg.get('frase_finale', '').strip()} {l['url']}\n\n{tag}".strip()
@@ -82,13 +87,13 @@ def link_video(nome):
     return f"`video/{nome}.mp4`"
 
 def manda_a_buffer():
-    """Crea in Buffer un post in coda (negli slot dello schedule, non bozza) per ogni uscita/*.json. Serve BUFFER_TOKEN e BUFFER_CHANNEL_ID; il video deve avere un indirizzo pubblico (VIDEO_URL_BASE)."""
+    """Crea in Buffer una bozza (fuori dagli slot; per la coda diretta: saveToDraft False) per ogni uscita/*.json. Serve BUFFER_TOKEN e BUFFER_CHANNEL_ID; il video deve avere un indirizzo pubblico (VIDEO_URL_BASE)."""
     token, canale = os.environ.get("BUFFER_TOKEN"), os.environ.get("BUFFER_CHANNEL_ID")
     if not (token and canale): print("Buffer non configurato (BUFFER_TOKEN, BUFFER_CHANNEL_ID): salto."); return
     q = """mutation($i: CreatePostInput!) { createPost(input: $i) { ... on PostActionSuccess { post { id } } ... on MutationError { message } } }"""
     for f in sorted((RADICE / "uscita").glob("*.json")):
         d = json.loads(f.read_text())
-        i = {"text": d["testo"], "channelId": canale, "schedulingType": "automatic", "mode": "addToQueue", "saveToDraft": False}
+        i = {"text": d["testo"], "channelId": canale, "schedulingType": "automatic", "mode": "addToQueue", "saveToDraft": True}
         if d["video"]: i["assets"] = [{"video": {"url": d["video"]}}]
         req = urllib.request.Request("https://api.buffer.com", json.dumps({"query": q, "variables": {"i": i}}).encode(),
                                      {"Content-Type": "application/json", "Authorization": f"Bearer {token}"})
@@ -100,22 +105,28 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--prova", action="store_true"); ap.add_argument("--ultime", type=int, default=0, help="tratta come nuove le ultime N lezioni della sitemap, anche se già viste"); ap.add_argument("--buffer", action="store_true", help="manda a Buffer (bozza) le lezioni preparate in uscita/"); ap.add_argument("--config", default=str(RADICE / "config.json"))
     a = ap.parse_args(); cfg = json.loads(Path(a.config).read_text())
     if a.buffer: return manda_a_buffer()
-    if "INSERISCI" in cfg["sitemap_url"] or "INSERISCI" in cfg["filtro_lezioni"]:
+    feed = leggi_feed(cfg["feed_url"]) if cfg.get("feed_url") else None   # con il feed non serve né la sitemap né la lettura delle pagine
+    if feed is None and ("INSERISCI" in cfg["sitemap_url"] or "INSERISCI" in cfg["filtro_lezioni"]):
         sys.exit("Compila prima config.json: indirizzo della sitemap e filtro delle lezioni.")
-    tutte = [u for u in indirizzi_sitemap(cfg["sitemap_url"]) if cfg["filtro_lezioni"] in u]
-    if not tutte: sys.exit("Nessuna lezione trovata nella sitemap: controlla sitemap_url e filtro_lezioni.")
+    tutte = [l["url"] for l in feed] if feed is not None else [u for u in indirizzi_sitemap(cfg["sitemap_url"]) if cfg["filtro_lezioni"] in u]
+    if not tutte: sys.exit("Nessuna lezione trovata: controlla feed_url (o sitemap_url e filtro_lezioni).")
     visti = set(json.loads(STATO.read_text())) if STATO.exists() else None
     if visti is None:
         print(f"Prima esecuzione: {len(tutte)} lezioni segnate come già viste, nessun post preparato.")
         if not a.prova: STATO.write_text(json.dumps(sorted(tutte), indent=1));
         return
-    nuove = tutte[-a.ultime:] if a.ultime else [u for u in tutte if u not in visti][: cfg.get("max_nuove_per_giro", 5)]
+    if feed is not None:   # il feed ha le più recenti per prime: si pubblica dalla più vecchia alla più nuova
+        per_url = {l["url"]: l for l in feed}
+        nuove = list(reversed(tutte[:a.ultime])) if a.ultime else [u for u in reversed(tutte) if u not in visti][: cfg.get("max_nuove_per_giro", 5)]
+    else:
+        per_url = {}
+        nuove = tutte[-a.ultime:] if a.ultime else [u for u in tutte if u not in visti][: cfg.get("max_nuove_per_giro", 5)]
     print(f"{len(tutte)} lezioni in sitemap, {len(nuove)} nuove.")
     (RADICE / "uscita").mkdir(exist_ok=True)
     for u in nuove:
         print("→", u)
         try:
-            l = leggi_pagina(u); testo = componi_testo(l, cfg); nome = nome_sicuro(u); mp4 = RADICE / "video" / f"{nome}.mp4"; avviso = ""
+            l = per_url.get(u) or leggi_pagina(u); testo = componi_testo(l, cfg); nome = nome_sicuro(u); mp4 = RADICE / "video" / f"{nome}.mp4"; avviso = ""
             if l["gif"]:
                 tetto = cfg.get("peso_massimo_mb_mp4", 15)
                 mb = converti(scarica(l["gif"], binario=True, limite=60 * 1024 * 1024), mp4, tetto); print(f"  MP4 {mb:.1f} MB")
