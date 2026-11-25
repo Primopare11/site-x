@@ -87,13 +87,13 @@ def link_video(nome):
     return f"`video/{nome}.mp4`"
 
 def manda_a_buffer():
-    """Crea in Buffer una bozza (fuori dagli slot; per la coda diretta: saveToDraft False) per ogni uscita/*.json. Serve BUFFER_TOKEN e BUFFER_CHANNEL_ID; il video deve avere un indirizzo pubblico (VIDEO_URL_BASE)."""
+    """Crea in Buffer un post in coda (negli slot dello schedule, non bozza; per le bozze: saveToDraft True) per ogni uscita/*.json. Serve BUFFER_TOKEN e BUFFER_CHANNEL_ID; il video deve avere un indirizzo pubblico (VIDEO_URL_BASE)."""
     token, canale = os.environ.get("BUFFER_TOKEN"), os.environ.get("BUFFER_CHANNEL_ID")
     if not (token and canale): print("Buffer non configurato (BUFFER_TOKEN, BUFFER_CHANNEL_ID): salto."); return
     q = """mutation($i: CreatePostInput!) { createPost(input: $i) { ... on PostActionSuccess { post { id } } ... on MutationError { message } } }"""
     for f in sorted((RADICE / "uscita").glob("*.json")):
         d = json.loads(f.read_text())
-        i = {"text": d["testo"], "channelId": canale, "schedulingType": "automatic", "mode": "addToQueue", "saveToDraft": True}
+        i = {"text": d["testo"], "channelId": canale, "schedulingType": "automatic", "mode": "addToQueue", "saveToDraft": False}
         if d["video"]: i["assets"] = [{"video": {"url": d["video"]}}]
         req = urllib.request.Request("https://api.buffer.com", json.dumps({"query": q, "variables": {"i": i}}).encode(),
                                      {"Content-Type": "application/json", "Authorization": f"Bearer {token}"})
